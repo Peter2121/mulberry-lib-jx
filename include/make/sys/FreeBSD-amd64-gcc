@@ -1,0 +1,131 @@
+# configuration for compiling on FreeBSD 11+ (amd64) with GCC from packages
+#
+# Derived from Linux-Intel-x86-64-gcc3.  X11, Xft, fontconfig, freetype2
+# and pcre2 come from packages under /usr/local.
+#
+# The compiler defaults to the "gcc"/"g++" of the lang/gcc metaport.  Set
+# JX_CC/JX_CXX (e.g. gcc14/g++14) to select a specific GCC version; the
+# same compiler must be used for the whole Mulberry build, since the C++
+# runtime (libstdc++) of JX/ACE and of Mulberry must match.
+
+#
+# Adjustable parameters
+#
+
+JX_CC  ?= gcc
+JX_CXX ?= g++
+
+# This tells us where to find the X libraries.
+
+J_X11_LIB_DIR := -L/usr/local/lib
+
+# Uncomment this and change it if your X11 headers are not in /usr/include/X11.
+# (GCC from packages searches /usr/local/include by default.)
+
+# J_X11_INCLUDE_DIR := -I/usr/local/include
+
+# Uncomment this if you want to compile libXpm into libjx
+
+# JX_INCLUDE_LIBXPM := yes
+
+# Uncomment these for Xft support
+
+JX_USE_XFT := yes
+J_XFT_LIB := -lXft
+J_USE_XFT := -D_J_USE_XFT
+J_INCLUDE_FREETYPE := ${shell pkg-config --cflags freetype2 2>/dev/null || echo "-I/usr/local/include/freetype2"}
+
+# Uncomment these for utf-8 string drawing
+# This can be used even if Xft is not used, as JX will downgrade
+# utf8 strings to iso-8859-1
+
+JX_USE_UTF8_STRINGS := yes
+J_USE_UTF8_STRINGS := -D_J_USE_UTF8_STRINGS
+
+# This sets the optimization level
+
+J_OPTIMIZE_LEVEL := 0
+
+# Comment this out if your system is not ELF.
+
+J_BUILD_SHARED_LIB  := -fPIC
+J_BEGIN_LINK_STATIC := -Xlinker -Bstatic
+J_END_LINK_STATIC   := -Xlinker -Bdynamic
+
+# This flag tells the linker to build a shared library.
+
+J_SHARED_LIB_LINK_OPTION := -shared
+
+# Uncomment this if you want debugging versions of the libraries.
+
+J_COMPILE_DEBUG := -g
+
+# Comment this out if ACE or other code gives you warnings that
+# you can't avoid.
+
+#J_DIE_ON_WARNING := -Werror
+
+# Comment this out if new[] and delete[] are not overridable.
+
+J_ARRAY_NEW_OVERRIDABLE := -D_J_ARRAY_NEW_OVERRIDABLE
+
+# Uncomment this if your version of GNU make does not automatically
+# generate the -o parameter.
+
+# J_MAKE_NEEDS_OUTPUT_ARG = -o $@
+
+# This command is used to strip debugging info but not the symbol table.
+
+J_STRIP_DEBUG := strip -g
+
+# Uncomment this if your system does not support threads
+J_USE_THREADS := yes
+
+# Comment this out if your version of "ar" does not accept the -s option.
+
+J_RANLIB_VIA_AR_S := -D_J_RANLIB_VIA_AR_S
+
+# Uncomment this if your system doesn't have memmove() (used by jlib/regex)
+
+# J_REGEX_USE_BCOPY := -DUSEBCOPY
+
+# Adjust these until everything compiles
+
+J_RAW_SYSTEM_STUFF := \
+  -DSIZEOF_LONG=8 -DSIZEOF_INT=4 \
+  -D_LOOSE_KERNEL_NAMES \
+  -D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED \
+  -D_DEFAULT_SOURCE -D_GNU_SOURCE
+
+#
+# Nothing below this line should ever need to be changed.
+#
+
+# GCC's own runtime (libstdc++, libgcc_s) lives in /usr/local/lib/gccNN.
+# Record it as rpath, otherwise the base system's /lib/libgcc_s.so.1 is
+# found first at run time.
+
+J_GCC_RUNTIME_DIR := ${shell cd `dirname \`${JX_CXX} -print-file-name=libstdc++.so\`` && pwd -P}
+
+# makemake variables
+
+LINKER := ${JX_CXX}
+
+# make variables
+
+CC       := ${JX_CC}
+CXX      := ${JX_CXX}
+CPPFLAGS  = ${DEPENDFLAGS} -Wno-deprecated
+CFLAGS    = ${J_MAKE_NEEDS_OUTPUT_ARG} -fstack-clash-protection
+CXXFLAGS  = ${J_MAKE_NEEDS_OUTPUT_ARG} -fstack-clash-protection
+
+# libraries to link
+
+J_GCC_LIBS  := -lstdc++ -lpcre2-8 -lm -lc -ldl -Xlinker -rpath -Xlinker ${J_GCC_RUNTIME_DIR}
+J_ACE_LIBS  := -L${JX_ROOT}/lib -lACE-${ACE_LIB_VERSION}
+J_X11_LIBS  := -L${JX_ROOT}/lib ${J_X11_LIB_DIR} -lXext -lXpm -lX11 ${J_XFT_LIB}
+J_MESA_LIBS := -L${JX_ROOT}/lib -lglut -lGLU -lGL
+
+# modify settings based on OS, compiler, etc.
+
+include ${JX_ROOT}/include/make/jx_config_common

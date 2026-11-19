@@ -5,6 +5,13 @@
 
 #ifndef ACE_CONFIG_H
 #define ACE_CONFIG_H
+
+// FreeBSD's <sys/sem.h> only declares union semun (which ACE_HAS_SEMUN
+// below promises) when _WANT_SEMUN is defined.
+#ifndef _WANT_SEMUN
+#define _WANT_SEMUN 1
+#endif
+
 #include /**/ "ace/pre.h"
 
 #if !defined (ACE_MT_SAFE)
@@ -217,8 +224,13 @@ extern "C" { char * cuserid (char *s); }
 #endif /* ACE_HAS_THREADS */
 
 #define ACE_LACKS_THREAD_PROCESS_SCOPING
+// Process-shared mutexes and condition variables are supported since
+// FreeBSD 11.0.  Declaring them missing also trips an inconsistency
+// between OS_NS_Thread.h and OS_NS_Thread.cpp (ACE_eventdata_t::lock_).
+#if (__FreeBSD_version < 1100000)
 #define ACE_LACKS_CONDATTR_PSHARED
 #define ACE_LACKS_MUTEXATTR_PSHARED
+#endif
 #define ACE_HAS_THREAD_SPECIFIC_STORAGE
 #define ACE_HAS_DIRENT
 

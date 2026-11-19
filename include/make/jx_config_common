@@ -32,8 +32,10 @@ ifeq ($(findstring g++,${CXX}),g++)
     JX_HAS_GNUG_PRE_2_8 := 0
     JX_HAS_GNUG_2_95    := 0
   else  # ! plain g++ or eg++
-    # CXX is something like g++386.  Assume, for now, that it's an old g++.
-    JX_HAS_GNUG_PRE_2_8 := 1
+    # CXX is a versioned or prefixed g++ (e.g. g++14 on FreeBSD,
+    # x86_64-linux-gnu-g++).  Pre-2.8 g++ is long extinct, so assume
+    # a modern compiler.
+    JX_HAS_GNUG_PRE_2_8 := 0
     JX_HAS_GNUG_2_95    := 0
   endif # ! plain g++ or eg++
   endif # ! g++

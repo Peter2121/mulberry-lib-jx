@@ -71,6 +71,7 @@ default:
 	@echo "  ${MAKE} debian3_1      for Debian 3.1 GNU/Linux (Sarge)"
 	@echo "  ${MAKE} freebsd2_x     for FreeBSD 2.x"
 	@echo "  ${MAKE} freebsd3_x     for FreeBSD 3.x"
+	@echo "  ${MAKE} freebsd_amd64  for FreeBSD 11+ on amd64 with GCC"
 	@echo "  ${MAKE} hpux10-g++     for HP-UX 10 with g++"
 	@echo "  ${MAKE} irix5_3-g++    for IRIX 5.3 with g++"
 	@echo "  ${MAKE} irix6_x-g++    for IRIX 6.x with g++"
@@ -337,6 +338,21 @@ freebsd3_x: prep
            include/jcore/jMissingProto.h
 	@${TEST_ACE_CONFIG} config-freebsd-pthread.h ${CREATE_ACE_CONFIG}
 	@${TEST_ACE_MACROS} platform_freebsd_pthread.GNU ${CREATE_ACE_MACROS}
+	+@${INSTALL_CMD}
+
+#
+# Modern FreeBSD (11+) on amd64, built with GCC from packages
+# (set JX_CC/JX_CXX to e.g. gcc14/g++14 to select the version)
+#
+
+.PHONY : freebsd_amd64
+freebsd_amd64: prep
+	@ln -s sys/FreeBSD-amd64-gcc \
+           include/make/jx_config
+	@ln -s ../../include/missing_proto/jMissingProto_empty.h \
+           include/jcore/jMissingProto.h
+	@${TEST_ACE_CONFIG} config-freebsd.h ${CREATE_ACE_CONFIG}
+	@${TEST_ACE_MACROS} platform_freebsd.GNU ${CREATE_ACE_MACROS}
 	+@${INSTALL_CMD}
 
 #

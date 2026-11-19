@@ -20,8 +20,17 @@ debug ?= 1
 optimize ?= 1
 pipes ?= 1
 
+# Use the same compiler as JX (see include/make/sys/FreeBSD-amd64-gcc)
+ifdef JX_CC
+CC              = $(JX_CC)
+else
 CC              = gcc
+endif
+ifdef JX_CXX
+CXX             = $(JX_CXX)
+else
 CXX             = g++
+endif
 
 CFLAGS          += -W -Wall -Wpointer-arith
 DCFLAGS         += -g
