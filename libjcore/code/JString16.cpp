@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include <sstream>
 #include <strstream>
+#include <vector>
 #include <iomanip>
 #include <jErrno.h>
 #include <jAssert.h>
@@ -394,30 +395,16 @@ JString16::FromASCII(const JString& ascii)
 void
 JString16::FromASCII(const JCharacter* ascii)
 {
-  std::ostrstream sout;
+	// Build the string from character values, so that no byte order is
+	// involved (testing glibc's __BYTE_ORDER here made FreeBSD, which does not
+	// define it, store every character byte-swapped). The cast to unsigned char
+	// keeps bytes >= 0x80 as Latin-1 instead of negative values.
+	std::vector<JCharacter16> chars;
+	for (const JCharacter* p = ascii; *p; p++)
+		chars.push_back((unsigned char) *p);
+	chars.push_back(0);
 
-	const JCharacter* p = ascii;
-
-	// Convert each character
-	unsigned long charlen = 0;
-	wchar_t wc = 0;
-	while(*p)
-	{
-		JCharacter16 c = *p++;
-#if __BYTE_ORDER == __BIG_ENDIAN
-		sout.put((c & 0xFF00) >> 8);
-		sout.put(c & 0x00FF);
-#else
-		sout.put(c & 0x00FF);
-		sout.put((c & 0xFF00) >> 8);
-#endif
-	}
-
-	sout << std::ends << std::ends;
-	
-	const JCharacter16* pout = (const JCharacter16*)sout.str();
-	Set(pout);	
-	sout.freeze(false);
+	Set(&chars[0]);
 }
 
 JString
@@ -476,25 +463,32 @@ JString16::FromUTF8(const JString& utf8)
 void
 JString16::FromUTF8(const JCharacter* utf8)
 {
-  std::ostrstream sout;
+	// Decode into character values, so that no byte order is involved
+	// (testing glibc's __BYTE_ORDER here made FreeBSD, which does not define
+	// it, store every non-ASCII character byte-swapped: a typed e-acute (U+00E9) became
+	// U+E900, Cyrillic letters became CJK characters).
+	std::vector<JCharacter16> chars;
 
-	const JCharacter* p = utf8;
-
-	// Convert each character
+	const unsigned char* p = (const unsigned char*) utf8;
 	unsigned long charlen = 0;
-	wchar_t wc = 0;
+	unsigned long wc = 0;
 	while(*p)
 	{
 		unsigned char mask = 0x3f;
 		if (charlen == 0)
 		{
-			// Determine length of utf8 encoded wchar_t
-			if ((*p & 0xf0 ) == 0xe0)
+			// Determine length of utf8 encoded character
+			if ((*p & 0xf8) == 0xf0)
+			{
+				charlen = 4;
+				mask = 0x07;
+			}
+			else if ((*p & 0xf0) == 0xe0)
 			{
 				charlen = 3;
 				mask = 0x0f;
 			}
-			else if ((*p & 0xe0 ) == 0xc0)
+			else if ((*p & 0xe0) == 0xc0)
 			{
 				charlen = 2;
 				mask = 0x1f;
@@ -519,24 +513,20 @@ JString16::FromUTF8(const JCharacter* utf8)
 		// Reduce byte remaining count and write it out if done
 		if (!--charlen)
 		{
-			if ((wc != 0xfffe) && !((wc >= 0xd800) && (wc < 0xe000)))
+			if (wc > 0xffff)
 			{
-#if __BYTE_ORDER == __BIG_ENDIAN
-				sout.put((wc & 0xFF00) >> 8);
-				sout.put(wc & 0x00FF);
-#else
-				sout.put(wc & 0x00FF);
-				sout.put((wc & 0xFF00) >> 8);
-#endif
+				// Beyond 16 bits (e.g. emoji): cannot be held, use the replacement character
+				chars.push_back(0xfffd);
+			}
+			else if ((wc != 0xfffe) && !((wc >= 0xd800) && (wc < 0xe000)))
+			{
+				chars.push_back((JCharacter16) wc);
 			}
 		}
 	}
+	chars.push_back(0);
 
-	sout << std::ends << std::ends;
-	
-	const JCharacter16* pout = (const JCharacter16*)sout.str();
-	Set(pout);	
-	sout.freeze(false);
+	Set(&chars[0]);
 }
 
 /******************************************************************************
